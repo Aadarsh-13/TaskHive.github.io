@@ -6,21 +6,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 function App() {
   const [todo, setTodo] = useState('');
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState(() => {
+    const storedTodos = localStorage.getItem('todos');
+    return storedTodos ? JSON.parse(storedTodos) : [];
+  });
   const [showFinished, setShowFinished] = useState(true);
-  const [confirmDelete, setConfirmDelete] = useState(null); // Manage the confirmation state for deletion
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Load todos from localStorage on initial load
+  // Save todos to localStorage whenever they change
   useEffect(() => {
-    const storedTodos = JSON.parse(localStorage.getItem('todos')) || [];
-    setTodos(storedTodos);
-  }, []);
-
-  // Save todos to localStorage whenever the todos array changes
-  useEffect(() => {
-    if (todos.length > 0) {
-      localStorage.setItem('todos', JSON.stringify(todos));
-    }
+    localStorage.setItem('todos', JSON.stringify(todos)); // ✅ Always save, even when empty
   }, [todos]);
 
   const toggleFinished = () => {
@@ -28,27 +23,28 @@ function App() {
   };
 
   const handleEdit = (id) => {
-    const t = todos.find((i) => i.id === id);
-    setTodo(t.todo);  // Set the todo value for editing
-    handleDelete(id);  // Delete the task after editing
+    const taskToEdit = todos.find((t) => t.id === id);
+    if (taskToEdit) {
+      setTodo(taskToEdit.todo);
+      handleDelete(id);
+    }
   };
 
   const handleDelete = (id) => {
-    // If confirmation dialog is active, delete the task, otherwise ask for confirmation
     if (confirmDelete === id) {
-      const newTodos = todos.filter((item) => item.id !== id);
+      const newTodos = todos.filter((task) => task.id !== id);
       setTodos(newTodos);
-      setConfirmDelete(null); // Reset confirmation state after deletion
+      setConfirmDelete(null);
     } else {
-      setConfirmDelete(id); // Activate confirmation for this task
+      setConfirmDelete(id);
     }
   };
 
   const handleAdd = () => {
     if (todo.trim().length > 3) {
-      const newTodos = [...todos, { id: uuidv4(), todo, isCompleted: false }];
-      setTodos(newTodos);
-      setTodo(''); // Reset input after adding
+      const newTask = { id: uuidv4(), todo, isCompleted: false };
+      setTodos([...todos, newTask]);
+      setTodo('');
     }
   };
 
@@ -58,14 +54,13 @@ function App() {
 
   const handleCheckbox = (e) => {
     const id = e.target.name;
-    const newTodos = todos.map((item) =>
-      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    const newTodos = todos.map((task) =>
+      task.id === id ? { ...task, isCompleted: !task.isCompleted } : task
     );
     setTodos(newTodos);
   };
 
   const handleKeyPress = (e) => {
-    // Trigger the add task when the 'Enter' key is pressed
     if (e.key === 'Enter' && todo.trim().length > 3) {
       handleAdd();
     }
@@ -80,6 +75,8 @@ function App() {
             TaskHive - Stay on Track with Every Task
           </span>
         </h1>
+
+        {/* Add Task Section */}
         <div className="px-5 addTodo my-5 flex flex-col gap-4">
           <h2 className="text-2xl font-bold">
             <span className="hover:text-green-800 transition-colors duration-300">Add a Task</span>
@@ -87,10 +84,11 @@ function App() {
           <div className="flex">
             <input
               onChange={handleChange}
-              onKeyDown={handleKeyPress}  // Add the keydown event listener for "Enter"
+              onKeyDown={handleKeyPress}
               value={todo}
               type="text"
-              className="w-full rounded-full px-5 border-10 py-1 border-lime-600 "
+              placeholder="Enter your task..."
+              className="w-full rounded-full px-5 border-2 py-1 border-lime-600"
             />
             <button
               onClick={handleAdd}
@@ -101,51 +99,58 @@ function App() {
             </button>
           </div>
         </div>
-        <input className="my-4" id="show" onChange={toggleFinished} type="checkbox" checked={showFinished} />
-        <label className="mx-2" htmlFor="show">
-          Show Finished tasks
-        </label>
+
+        {/* Show Finished Checkbox */}
+        <div className="flex items-center">
+          <input className="my-4" id="show" onChange={toggleFinished} type="checkbox" checked={showFinished} />
+          <label className="mx-2 text-lg" htmlFor="show">
+            Show Finished tasks
+          </label>
+        </div>
+
         <div className="h-[2px] bg-black opacity-40 w-[90%] mx-auto my-2"></div>
+
+        {/* Task List */}
         <h2 className="text-2xl font-bold">Your Todos</h2>
         <div className="todos">
-          {todos.length === 0 && <div className="m-5">No task pending</div>}
-          {todos.map((item) =>
-            (showFinished || !item.isCompleted) && (
-              <div key={item.id} className="todo flex my-3 justify-between">
-                <div className="flex gap-5">
+          {todos.length === 0 && <div className="m-5 text-gray-700">No tasks pending</div>}
+          {todos.map((task) =>
+            (showFinished || !task.isCompleted) && (
+              <div key={task.id} className="todo flex my-3 justify-between items-center bg-white p-3 rounded-md shadow-md">
+                <div className="flex gap-5 items-center">
                   <input
-                    name={item.id}
+                    name={task.id}
                     onChange={handleCheckbox}
                     type="checkbox"
-                    checked={item.isCompleted}
+                    checked={task.isCompleted}
                   />
-                  <div className={item.isCompleted ? 'line-through' : ''}>{item.todo}</div>
+                  <div className={task.isCompleted ? 'line-through text-gray-500' : ''}>{task.todo}</div>
                 </div>
                 <div className="buttons flex h-full">
                   <button
-                    onClick={() => handleEdit(item.id)}
-                    className="bg-violet-800 hover:bg-violet-950 p-2 py-1 text-sm font-bold text-white rounded-md mx-1"
+                    onClick={() => handleEdit(task.id)}
+                    className="bg-blue-600 hover:bg-blue-800 p-2 py-1 text-sm font-bold text-white rounded-md mx-1"
                   >
                     <FaEdit />
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id)}
-                    className="bg-violet-800 hover:bg-violet-950 p-2 py-1 text-sm font-bold text-white rounded-md mx-1"
+                    onClick={() => handleDelete(task.id)}
+                    className="bg-red-600 hover:bg-red-800 p-2 py-1 text-sm font-bold text-white rounded-md mx-1"
                   >
                     <AiFillDelete />
                   </button>
                 </div>
-                {confirmDelete === item.id && (
-                  <div className="confirm-delete">
+                {confirmDelete === task.id && (
+                  <div className="confirm-delete flex gap-2">
                     <button
-                      onClick={() => handleDelete(item.id)}
-                      className="bg-red-600 text-white rounded-md p-1"
+                      onClick={() => handleDelete(task.id)}
+                      className="bg-red-600 text-white rounded-md px-2 py-1"
                     >
                       Confirm Delete
                     </button>
                     <button
                       onClick={() => setConfirmDelete(null)}
-                      className="bg-gray-600 text-white rounded-md p-1"
+                      className="bg-gray-600 text-white rounded-md px-2 py-1"
                     >
                       Cancel
                     </button>
