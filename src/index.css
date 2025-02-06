@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body{
+    --tw-bg-opacity: 1;
+    background-color: rgb(20, 20, 20)
+}
+
+body {
+    --tw-bg-opacity: 1;
+    background-color: rgb(46, 29, 29);
+}
+
+body:hover {
+    background-color: rgb(25, 20, 40); /* Slightly lighter on hover */
+}
+
